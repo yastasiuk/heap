@@ -8,7 +8,7 @@
 
 		<link rel="stylesheet" href="css/reset.css">
 		<link rel="stylesheet" href="css/reveal.css">
-		<link rel="stylesheet" href="css/theme/black.css">
+		<link rel="stylesheet" href="css/theme/moon.css">
 
 		<!-- Theme used for syntax highlighting of code -->
 		<link rel="stylesheet" href="lib/css/monokai.css">
@@ -20,13 +20,541 @@
 			link.type = 'text/css';
 			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
 			document.getElementsByTagName( 'head' )[0].appendChild( link );
-		</script>
+        </script>
+        <style>
+        .high-top {
+            top: -100px!important;
+        }
+        .top170 {
+            top: -170px!important;
+        }
+        </style>
 	</head>
 	<body>
 		<div class="reveal">
-			<div class="slides">
-				<section>Slide 1</section>
-				<section>Slide 2</section>
+			<div class="slides" style="height: 100%;">
+				<section data-transition="none">
+                    <h3>Soft Heap</h3>
+                    <p style="font-size: 50%;">
+                        <small>(some smart text about importance of that topic)</small>
+                    </p>
+                </section>
+                <section data-transition="none">
+                    <h3>Agenda</h3>
+                    <p>(хороший тон, все же напиши эту часть)</p>
+                </section>
+                <section data-transition="none">
+                    <h3>Soft heap</h3>
+                    <div style="font-size: 14px;">
+                        <p>- это разновидность Кучи(heap), особенность которой в том, что амортизационная сложность основных 5 основных типов опертаций константна. Это достигается с помощью порчи(corruption) части ключей в куче.</p>
+                        <h6>Основные операции и сложность:</h6>
+                        <table>
+                            <tbody>
+                                <tr>
+                                    <td>make-heap(ε, x)</td>
+                                    <td>O(1)</td>
+                                    <td>создание новой кучи с уровнем порчи ε</td>
+                                </tr>
+                                <tr>
+                                    <td>insert(P, x)</td>
+                                    <td>O(log(1/ε))*</td>
+                                    <td>добавление элемента "х" в очередь Р</td>
+                                </tr>
+                                <tr>
+                                    <td>extract-min(P)</td>
+                                    <td>O(1)</td>
+                                    <td>извлечение элемента с найменшим приоритетом очереди Р(+удаление этого элемента)</td>
+                                </tr>
+                                <tr>
+                                    <td>decrease-key(P, x, k)</td>
+                                    <td>O(1)</td>
+                                    <td>обновить значение элемента "х" и присвоить ему значение "k"</td>
+                                </tr>
+                                <tr>
+                                    <td>meld(P, Q)</td>
+                                    <td>O(1)</td>
+                                    <td>объеденение двух приоритетных очередей с их разрушением в процессе</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <p class="fragment" data-fragment-index="2">*Из-за зависимости insert() от ε, конечная сложность алгоритма может варироваться от <span>O(1) при ε = 1</span> до <span>O(log(n)) при ε => 0</span> </p>
+                    </div>
+                </section>
+                <section data-transition="none">
+                    <section data-transition="none">
+                        <h4>Стуктура данных мягкой кучи</h4>
+                        <ul>
+                            <li>Cells</li>
+                            <li>Nodes</li>
+                            <li>Trees</li>
+                            <li>Priority list</li>
+                        </ul>
+                    </section>
+                    <section data-transition="none">
+                        <h5>Cells</h5>
+                        <div style="font-size: 16px;">
+                            <pre style="font-size: 18px;"><code data-trim data-noescape>
+                                struct Cell {
+                                    int elem;
+                                    struct Cell* prev;
+                                    struct Cell* next;
+                                }
+                            </code></pre>
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td>elem</td>
+                                        <td>изначально значение элемента</td>
+                                    </tr>
+                                    <tr>
+                                        <td>prev</td>
+                                        <td>ссылка на следующую ячейку</td>
+                                    </tr>
+                                    <tr>
+                                        <td>next</td>
+                                        <td>ссылка на предыдущую ячейку</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <section data-transition="none" class="high-top">
+                        <h5>Node</h5>
+                        <div style="font-size: 14px;">
+                            <div>
+                                <pre style="font-size: 18px;"><code data-trim data-noescape>
+                                    struct Node {
+                                        struct Cell* first;
+                                        struct Cell* last;
+
+                                        struct Node* left;
+                                        struct Node* right;
+
+                                        int ckey;
+                                        int size;
+                                        int nelems;
+                                        int rank;
+                                    }
+                                </code></pre>
+                            </div>
+                            <table>
+                                <tbody>
+                                    <tr>
+                                        <td>first/last</td>
+                                        <td>ссылка на первую/последнюю ячейку, ссылка на последнюю ячейку разрешает мерджить ячейки законстантное время</td>
+                                    </tr>
+                                    <tr>
+                                        <td>left/right</td>
+                                        <td>ссылка на левого/правого сына в бинарном дереве</td>
+                                    </tr>
+                                    <tr>
+                                        <td>ckey</td>
+                                        <td>приоритетность текущей ноды. Показывает верхнюю гранизу приоритетов всех ячеек в этой ноде. Если в
+                                        ноду будут добавляться новые ячейки - значение может обновиться, чтобы отобразить максимальную приоритетность
+                                        этой ноды.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>rank</td>
+                                        <td>максимально возможная высота, которую нода может принимать в любом бинарном дереве кучи. Каждая нода
+                                        в мягкой кучи сохраняет свой ранг с момента создания до уничтожения.</td>
+                                    </tr>
+                                    <tr>
+                                        <td>size</td>
+                                        <td>"идеально" количество ячеек, которые должны входить в эту ноду: $f(n.rank, ε) => n.size \tag 1$</td>
+                                    </tr>
+                                    <tr>
+                                        <td>nelemes</td>
+                                        <td>количество ячеек, которые в данный момент входят в эту ноду. Если n.elems будет слишком сильно
+                                        отличаться от n.size - количество элементов будет восполено(об это чуть позже :))</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <div>
+                                *Если ноде n соответствует ранг k, то $n.size = s_{k} $, где
+                                <div>
+                                    \begin{equation}
+                                        Sk=
+                                        \begin{cases}
+                                            1, & \text{if}\ r <= k \\
+                                            [3/2S_{k-1}], & \text{if}\ r > k
+                                        \end{cases}
+                                        \tag 1
+                                    \end{equation}
+                                    при
+                                    \begin{equation}
+                                        r=log_{2}(\frac{1}{ε}) + 5
+                                        \tag 2
+                                    \end{equation}
+                                </div>
+                            </div>
+                            <image src="./images/node.png" />
+                            <aside class="notes">
+                                <p>Хранит в себе информацию, которая используется для организации "soft heaps":</p>
+                                <p>Тут также стоит отменить 3 вещи:</p>
+                                <ol>
+                                    <li>
+                                        Если n.size = 1, то нода никогда не будет иметь более одной ячейки, потому n.ckey будет равняться
+                                        значению в этой ячейки, а потому эта ячейки не может быть "испорченой"
+                                        А это в свою очередь означает, что количество испорченных значений не может быть более количества ячеек в
+                                        нодах, для которых n.rank > r
+                                    </li>
+                                    <li>
+                                        Также как мы можем увидеть с уровнения (2) n.size экспоненциально возрастающая функция, при n.rank > r.
+                                        Поскольку теорема коррупции требует чтобы количество поврежденных элементов было ограничено
+                                        сверху долей числа вставок, которые когда-либо происходили, от нас требуется придумать такой способ
+                                        структурирования мягкой кучи, чтобы количество нод с рангом "k" экспоненциально уменьшалось с k,
+                                        иначе все элементы кучи будут быстро попадать в испорченные ноды, что в свою очередь сделаем эту структуру
+                                        данных бесполезной.
+                                    </li>
+                                    <li>
+                                        Как мы видим с уравнения (2) r = O(log2(1/ε)), что равняется амортизационной сложности операции "insert"
+                                        и это не случайность :)
+                                    </li>
+                                </ol>
+                            </aside>
+                        </div>
+                    </section>
+                    <section data-transition="none">
+                        <h5>Tree</h5>
+                        <div style="font-size: 14px;">
+                            <p>
+                                - используются двоичные деревья(биноминальные в оригинале).
+                            </p>
+                            <div>
+                                <pre style="font-size: 18px;"><code data-trim data-noescape>
+                                struct Tree {
+                                    struct Node* root;
+                                    int rank;
+
+                                    struct Tree* prev;
+                                    struct Tree* next;
+                                    struct Tree* sufmin;
+                                }
+                                </code></pre>
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>t.root</td>
+                                            <td>ссылка на корневую ноду</td>
+                                        </tr>
+                                        <tr>
+                                            <td>t.rank</td>
+                                            <td>ранг дерева, который равняется рангу корневой ноды</td>
+                                        </tr>
+                                        <tr>
+                                            <td>t.prev</td>
+                                            <td>ссылка на предыдущее дерево в рутлисте</td>
+                                        </tr>
+                                        <tr>
+                                            <td>t.next</td>
+                                            <td>ссылка на следующее дерево в рутлисте</td>
+                                        </tr>
+                                        <tr>
+                                            <td>t.sufmin</td>
+                                            <td>ссылка да дерево с найменьшей приоритетность(ckey), среди деревьев, которые имею такой же или выше
+                                            ранг, при сравнении с текущим деревов</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <image src="./images/tree.png" />
+                            </div>
+                        </div>
+                        <aside class="notes">
+                            Ноды хранятся в двоичных деревьях. Эти двоичные деревья упорядочены в куче: ключ любого узла должен быть
+                            меньше или равен ключу его дочерних элементов в двоичном дереве - при условии, что у узла действительно есть
+                            дочерние элементы.
+                            Каждое дерево в мягкой куче хранится под заголовком дерева T.
+                            <p>
+                                На счет sufmin будет на следующем слайде про RootList
+                            </p>
+                            <p>
+                                Figure 1 shows an example of a rank-3 tree and how its structure evolves as its elements are withdrawn by extract-min
+                                calls. Since a soft heap does not attempt to repair the structure of a tree as its nodes are destroyed, the heap can
+                                show considerable structural variety, which makes it difficult to reason about the true cost of any single operation
+                            </p>
+                            <p>
+                                Figure 1: Snapshots of the lifetime of a rank-3 tree, from the moment of its creation until it contains just one node.
+                                The tree header is in blue and is marked with the tree’s rank. Tree nodes are in green and are marked with their ckeys.
+                                The length-1 item lists of each node are also shown; cells appear in red. As keys are withdrawn from the tree, it
+                                shrinks upward from the leaves until eventually it empties out. A tree of any rank can become this damaged without the
+                                heap attempting to restructure it, as the restrictions on the structure of a soft heap tree are significantly less
+                                stringent than those we might see in a binomial heap or Fibonacci heap.
+                            </p>
+                        </aside>
+                    </section>
+                    <section data-transition="none">
+                        <h5>RootList</h5>
+                        <div style="font-size: 14px;">
+                            <p>
+                                - деревья в мягкой куче хранятся в двухсвязном списке. В рутлисте не может быть 2-х деревьев с повторяющимись
+                                рангами.
+                            </p>
+                            <div>
+                                <pre style="font-size: 18px;"><code data-trim data-noescape>
+                                struct RootList {
+                                    struct Tree* first;
+                                    int rank;
+                                }
+                                </code></pre>
+                                <table>
+                                    <tbody>
+                                        <tr>
+                                            <td>rl.first</td>
+                                            <td>ссылка на деревье с найменьшим рангом</td>
+                                        </tr>
+                                        <tr>
+                                            <td>rl.rank</td>
+                                            <td>найбольши ранг среди деревьев</td>
+                                        </tr>
+                                        <tr>
+                                            <td>rl.ε</td>
+                                            <td>параметр уровня "коррупции", который задается изначально при создании мягкой кучи</td>
+                                        </tr>
+                                        <tr>
+                                            <td>rl.r</td>
+                                            <td>структурный параметр, получается и формулы (2)</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                                <image src="./images/root-list.png" />
+                            </div>
+                        </div>
+                        <aside class="notes">
+                            Figure 2: A rank-9 soft heap P with error parameter 0.5, featuring a heap header (in yellow) and showing sufmin
+                            pointers. Since the rank-3 tree has lower root ckey than the tree preceding it, the first two trees both have their
+                            sufmin pointers directed to it. The rank-9 tree cannot “see” this node, so its sufmin pointer is directed towards
+                            itself. At any point in the lifetime of P, we can find the node of minimum ckey in O(1) time by accessing
+                            P.first.sufmin.root.
+                        </aside>
+                    </section>
+                </section>
+                <section data-transition="none">
+                    <section data-transition="none">
+                        <h5>Имплементация</h5>
+                        <div>
+                            <p><bold>Основные операции:</bold></p>
+                            <ul>
+                                <li>make-heap</li>
+                                <li>extract-min</li>
+                                <li>meld</li>
+                                <li>insert</li>
+                            </ul>
+                            <p><bold>Дополнительные:</bold></p>
+                            <ul>
+                                <li>sift</li>
+                                <li>combine</li>
+                                <li>update-suffix-min</li>
+                            </ul>
+                        </div>
+                        <aside class="notes">
+                            начнем с дополнительных операций, чтобы после имплементировать основные
+                            - sift - пополняет ноду значениями, когда n.nelems становится слишком малым
+                            - combine - конвертирует 2 дерева с одинаковым рангом, для создания нового дерева
+                            - update-suffix-min - обновляет все sufmin ссылки.
+                        </aside>
+                    </section>
+                    <section data-transition="none">
+                        <h5>sift(x)</h5>
+                        <div style="font-size: 14px;">
+                            <ol>
+                                <li>If x has no child nodes, stop: there is no way to restore the item list.</li>
+                                <li>Determine which of x’s children has lower ckey. In O(1) time, remove that child’s item list and con-
+                                catenate it to x’s item list, updating x.nelems as appropriate.</li>
+                                <li>Change x.ckey to match the child’s ckey.</li>
+                                <li>
+                                    If the child we modified has children of its own, call sift recursively on the child to repair its item list.
+                                    If the child does not have children, its own item list cannot be repaired, so destroy it.
+                                </li>
+                                <li>If x.nelems ≥ x.size, stop. Otherwise, repeat from step 1</li>
+                            </ol>
+                        </div>
+                        <aside class="notes">
+                            *NOTE: как было подмечено перед этим, в идеале node.nelems === n.size.
+                            Чтобы обеспечить константный фактор x.size, мы будем вызывать sift(node) когда node.nelems < 1/2 node.size для
+                                восстановления баланса sift(node) будет вызываться до тех пор, пока не появится достаточное количество элементов в
+                                ноде. Большая часть работы в мягкий кучах выполняется как раз sift'ом.
+                        </aside>
+                    </section>
+                    <section data-transition="none" class="top170">
+                        <image src="./images/sift.png" />
+                        <aside class="notes">
+A typical sift operation. The root of this subtree has size 8; its right descendants have sizes 5, 3, 2, and 1 as we
+move down. a): the root has only three elements, so it is deficient. b): the root steals element and ckey 9 from its
+left child; since the child is a leaf, it is destroyed. c): the root is still deficient, so it steals five items and
+ckey 14 from its other child. d)-f): the size-5 child calls sift to refill its own item list, stealing three items and
+ckey 17; the size-3 descendant steals two items and ckey 19 from its child; and the size-2 descendant steals one item
+and ckey 20 from its child. Since this last child is a leaf, it is destroyed. The size-2 descendant is not completely
+fixed, but it cannot repair itself any further, so the recursion bottoms out. g): the size-3 descendant has not yet been
+repaired, so it destroys its child to finish its sift. h): the size-5 descendant completes its sift by destroying its
+child, terminating the two uppermost sift calls.
+                        </aside>
+                    </section>
+                    <!-- Combine Start -->
+                    <section data-transition="none">
+                        <h5>combine</h5>
+                        <div style="font-size: 14px;">
+                            <p>
+                                - при использовании meld(P, Q) в 2-х мягких кучах скорее всего будут деревья с одинаковыми рангами.
+                                т.к. созданная куча может иметь только по одному дереву для каждого ранга нам нужно каким-то образом скомбинировать деревья с одинакомы рангом.
+                                combine(P, Q) принимает 2 дерева с рангом k и возвращает новое дерево с рангом k + 1
+                            </p>
+                            <div>
+                                <ol>
+                                    <li>Create a new node z of rank k + 1. Initialize z.size to sk+1 by setting z.size = ⌈3/2 T1.root.size⌉. Set z’s children
+                                    to be T1.root and T2.root.</li>
+                                    <li>Call sift(z) to fill z’s item list from its new children.</li>
+                                    <li>Create a new header T and initialize its rank to k + 1. Set T.root = z.</li>
+                                    <li>Destroy tree headers T1 and T2 and put T into the melded rootlist in their place (the old headers are assumed to be adjacent in the new rootlist before combine is called).</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <image src="./images/combine-1.png" style="height: 50%; width: 50%"/>
+                    </section>
+                    <section data-transition="none">
+                        <h5>combine</h5>
+                        <div style="font-size: 14px;">
+                            <p>
+                                - при использовании meld(P, Q) в 2-х мягких кучах скорее всего будут деревья с одинаковыми рангами.
+                                т.к. созданная куча может иметь только по одному дереву для каждого ранга нам нужно каким-то образом
+                                скомбинировать деревья с одинакомы рангом.
+                                combine(P, Q) принимает 2 дерева с рангом k и возвращает новое дерево с рангом k + 1
+                            </p>
+                            <div>
+                                <ol>
+                                    <li>Create a new node z of rank k + 1. Initialize z.size to sk+1 by setting z.size = ⌈3/2 T1.root.size⌉.
+                                        Set z’s children
+                                        to be T1.root and T2.root.</li>
+                                    <li>Call sift(z) to fill z’s item list from its new children.</li>
+                                    <li>Create a new header T and initialize its rank to k + 1. Set T.root = z.</li>
+                                    <li>Destroy tree headers T1 and T2 and put T into the melded rootlist in their place (the old headers
+                                        are assumed to be adjacent in the new rootlist before combine is called).</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <image src="./images/combine-2.png" style="height: 50%; width: 50%"/>
+                    </section>
+                    <!-- Combine End -->
+
+                    <section data-transition="none">
+                        <h5>update-suffix-min</h5>
+                        <div style="font-size: 14px;">
+                            <p>- т.к. sift() изменяет ckey корневой ноды, а combine() уничтожает 2 дерева и создает новое - нам нужно также обновлять sufmin ссылки уже созданными деревьями и обновленными/новыми, иначе extract-min() будет некорректно работать в будущем</p>
+                            <div>
+                                <ol>
+                                    <li>If T.next is NULL, set T.sufmin = T.</li>
+                                    <li>Otherwise, T’s suffix min is either T or the suffix min of T.next. If T.next.sufmin.root.ckey ≥ T.root.ckey, set T.sufmin = T; otherwise, set T.sufmin = T.next.sufmin.</li>
+                                    <li>If T.prev is NULL, the fixup is finished. Otherwise, set T = T.prev and repeat from step 1.</li>
+                                    <li>If T.prev is NULL, the fixup is finished. Otherwise, set T = T.prev and repeat from step 1.
+                                    If T.rank = k, then the soft heap containing T contains at most k + 1 trees up to and including T. Therefore,
+                                    update-suffix-min runs in O(k + 1) time.</li>
+                                </ol>
+                                <p>
+                                    Учитывая, что все деревья выше ранга будут попрежнему иметь правильные sufmin поинтеры(из-за особенности структуры), мы можем начать обновление с самого правого дерева, которое изменилось и поочередно исправлять все деревья, у которых ранг меньше его.
+                                </p>
+                            </div>
+                        </div>
+                    </section>
+                    
+                    <section data-transition="none">
+                        <h5>make-heap(ε, x)</h5>
+                        <div style="font-size: 14px;">
+                            <p>- создает кучу с параметром испорченности "ε" и добавляет в неё элемент "х"</p>
+                            <div>
+                                <ol>
+                                    <li>Make a new rank-0, size-1 node, and initialize its item list to hold a single cell containing x.</li>
+                                    <li>Make this new node the root of a rank-0 tree header T. Set T.sufmin to itself.</li>
+                                    <li>Make a new rank-0 heap header P with error parameter ε and structural parameter r defined according to (2). Set P.first = T.</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ExtractMin start -->
+                    <section data-transition="none">
+                        <h5>extract-min(Р)</h5>
+                        <div style="font-size: 14px;">
+                            <p>- удаляет элемент со списка минимальных ckey в Р</p>
+                            <div>
+                                <ol>
+                                    <li>Find the tree T whose root has minimum ckey by accessing P.first.sufmin. Let x be T.root.</li>
+                                    <li>Save a copy of the first element from x’s item list and destroy the cell containing it. Decrement x.nelems.</li>
+                                    <li>If x.nelems is now less than 1 x.size, its item list is deficient. We must do one of three things:
+                                    a. If x has any children, call sift(x) to repair x’s item list, then call update-suffix-min(T) to reflect the change in
+                                    root ckey.
+                                    b. If x has no children and x.nelems = 0, T is now empty. Destroy x and T and remove T from P ’s rootlist. Call
+                                    update-suffix-min on T’s predecessor in the rootlist, if there is one. If T was the rightmost tree in the rootlist,
+                                    update P.rank to match the rank of T’s predecessor—again, if there is one. If T was the only tree in P, mark P as empty.
+                                    c. If x has no children and x.nelems > 0, we cannot repair x, but we also cannot destroy T since it is nonempty. In this
+                                    case, do nothing.</li>
+                                    <li>Finally, return the element we saved.</li>
+                                </ol>
+                            </div>
+                            <p>*если нода испорчена, то она не обязательно вернет минимально элемент</p>
+                            <image src="./images/extract-min-1.png" style="height: 50%; width: 50%" />
+                        </div>
+                    </section>
+                    <section data-transition="none">
+                        <h5>extract-min(Р)</h5>
+                        <div style="font-size: 14px;">
+                            <p>- удаляет элемент со списка минимальных ckey в Р</p>
+                            <div>
+                                <ol>
+                                    <li>Find the tree T whose root has minimum ckey by accessing P.first.sufmin. Let x be T.root.</li>
+                                    <li>Save a copy of the first element from x’s item list and destroy the cell containing it. Decrement
+                                        x.nelems.</li>
+                                    <li>If x.nelems is now less than 1 x.size, its item list is deficient. We must do one of three things:
+                                        a. If x has any children, call sift(x) to repair x’s item list, then call update-suffix-min(T) to
+                                        reflect the change in
+                                        root ckey.
+                                        b. If x has no children and x.nelems = 0, T is now empty. Destroy x and T and remove T from P ’s
+                                        rootlist. Call
+                                        update-suffix-min on T’s predecessor in the rootlist, if there is one. If T was the rightmost tree
+                                        in the rootlist,
+                                        update P.rank to match the rank of T’s predecessor—again, if there is one. If T was the only tree in
+                                        P, mark P as empty.
+                                        c. If x has no children and x.nelems > 0, we cannot repair x, but we also cannot destroy T since it
+                                        is nonempty. In this
+                                        case, do nothing.</li>
+                                    <li>Finally, return the element we saved.</li>
+                                </ol>
+                            </div>
+                            <p>*если нода испорчена, то она не обязательно вернет минимально элемент</p>
+                            <image src="./images/extract-min-2.png" style="height: 50%; width: 50%" />
+                        </div>
+                    </section>
+                    <!-- ExtractMin end -->
+                    
+                    <section data-transition="none">
+                        <h5>meld(P, Q)</h5>
+                        <div style="font-size: 14px;">
+                            <p>- объединение 2-х деревъев</p>
+                            <ol>
+                                <li>Iterate through the rootlist of Q. Each time we encounter a tree Tq in Q whose rank is greater than or equal to that
+                                of the tree Tp at the front of P, remove Tp from P and put it in front of Tq. Continue until P is empty. The original
+                                trees from P and Q are now lined up inside Q, in nondecreasing order of rank.</li>
+                                <li>Iterate over the unified rootlist. Each time we encounter a lone tree of a given rank, skip it. Each time we
+                                encounter exactly two trees T1 and T2 with the same rank, combine them and replace them in the rootlist with the
+                                resulting tree T. Each time we encounter exactly three trees with the same rank, skip the first one and then combine the
+                                second and third.</li>
+                                <li>Stop iterating when we encounter a lone tree whose rank is greater than P.rank; there are no more trees available to
+                                merge after this. Call update-suffix-min on this tree to prepare for the next extract-min. If this final tree was
+                                created by a combine on two trees of rank Q.rank, then increment Q.rank.</li>
+                            </ol>
+                            *есть картинка
+                        </div>
+                    </section>
+                    <section data-transition="none">
+                        <h5>insert(P, x)</h5>
+                        <div style="font-size: 14px;">
+                            <p>- добавление элемента х</p>
+                            <ol>
+                                <li>создание новой кучи с помощью make-heap(ε, x)</li>
+                                <li>объединение результатов в помощью meld(P, Q)</li>
+                            </ol>
+                        </div>
+                        <image src="./images/insert.png" />
+                    </section>
+                </section>
 			</div>
 		</div>
 
@@ -37,11 +565,19 @@
 			// - https://github.com/hakimel/reveal.js#configuration
 			// - https://github.com/hakimel/reveal.js#dependencies
 			Reveal.initialize({
+                center: false,
+                math: {
+                    mathjax: 'https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js',
+                    config: 'TeX-AMS_HTML-full',  // See http://docs.mathjax.org/en/latest/config-files.html
+		            // pass other options into `MathJax.Hub.Config()`
+		            // TeX: { Macros: macros },
+                },
 				dependencies: [
 					{ src: 'plugin/markdown/marked.js' },
 					{ src: 'plugin/markdown/markdown.js' },
 					{ src: 'plugin/notes/notes.js', async: true },
-					{ src: 'plugin/highlight/highlight.js', async: true }
+					{ src: 'plugin/highlight/highlight.js', async: true },
+                    { src: 'plugin/math/math.js', async: true },
 				]
 			});
 		</script>
